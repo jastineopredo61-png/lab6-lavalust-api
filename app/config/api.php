@@ -38,73 +38,39 @@ defined('PREVENT_DIRECT_ACCESS') OR exit('No direct script access allowed');
 |--------------------------------------------------------------------------
 | Enable/Disable API Helper
 |--------------------------------------------------------------------------
-|
-| The API Helper is disabled by default for security reasons.
-| Before enabling it you MUST set the jwt_secret and refresh_token_key
-| below (see their notes). The API library refuses to start otherwise.
-|
+| Must be TRUE for the api library to work at all.
 */
-$config['api_helper_enabled'] = FALSE;
+$config['api_helper_enabled'] = TRUE;
 
 /*
 |--------------------------------------------------------------------------
-| Payload Token Expiration
+| Payload Token Expiration (seconds) - access token lifetime
 |--------------------------------------------------------------------------
-|
-| Used for Payload Token Expiration
-|
 */
-$config['payload_token_expiration'] = 900;
-
+$config['payload_token_expiration'] = 900; // 15 minutes
 
 /*
 |--------------------------------------------------------------------------
-| Refresh Token Expiration
+| Refresh Token Expiration (seconds)
 |--------------------------------------------------------------------------
-|
-| Used for Refresh Token Expiration
-|
 */
-$config['refresh_token_expiration'] = 604800;
+$config['refresh_token_expiration'] = 604800; // 7 days
 
 /*
 |--------------------------------------------------------------------------
 | JWT Secret Token
 |--------------------------------------------------------------------------
-|
-| Used for Securing endpoint
-|
-| REQUIRED when api_helper_enabled is TRUE. There is intentionally no
-| default value: a secret that ships with the framework is public and
-| lets anyone forge valid tokens.
-|
-| Provide it through the environment variable LAVALUST_JWT_SECRET.
-| It must be at least 32 random characters. Generate one with:
-|
-|   php -r "echo bin2hex(random_bytes(32));"
-|
-| Never commit the real value to version control. If a secret was ever
-| committed or exposed, rotate it. All existing tokens become invalid.
-|
+| REQUIRED. No default - must be 32+ random characters, set via .env
+| (or Render Environment Variables when deployed).
+| Generate both secrets at once with: php lava jwt:generate
 */
 $config['jwt_secret'] = getenv('JWT_SECRET') ?: '';
 
 /*
 |--------------------------------------------------------------------------
-| Refresh Token
+| Refresh Token Key
 |--------------------------------------------------------------------------
-|
-| Used for Securing endpoint
-|
-| REQUIRED when api_helper_enabled is TRUE. There is intentionally no
-| default value. It is used to hash refresh tokens before they are stored
-| in the database and must be different from jwt_secret.
-|
-| Provide it through the environment variable LAVALUST_REFRESH_TOKEN_KEY.
-| It must be at least 32 random characters. Generate one with:
-|
-|   php -r "echo bin2hex(random_bytes(32));"
-|
+| REQUIRED. Must be different from jwt_secret above.
 */
 $config['refresh_token_key'] = getenv('REFRESH_TOKEN_KEY') ?: '';
 
@@ -112,14 +78,8 @@ $config['refresh_token_key'] = getenv('REFRESH_TOKEN_KEY') ?: '';
 |--------------------------------------------------------------------------
 | Verify User On Each Request
 |--------------------------------------------------------------------------
-|
-| When TRUE, require_jwt() checks that the token's subject exists in the
-| users table and takes role and scopes from the database instead of
-| trusting the token claims. This costs one indexed query per request.
-|
-| Set to FALSE only if your users are not stored in the table below and
-| you perform your own server-side authorization checks.
-|
+| TRUE = require_jwt() re-checks the users table every request and pulls
+| role fresh from the database instead of trusting the token. Keep TRUE.
 */
 $config['jwt_verify_user'] = TRUE;
 
@@ -127,11 +87,8 @@ $config['jwt_verify_user'] = TRUE;
 |--------------------------------------------------------------------------
 | Users Table
 |--------------------------------------------------------------------------
-|
-| Name of the table holding your users. It needs at least the columns
-| "id" and "role". Used when refreshing tokens and when jwt_verify_user
-| is TRUE.
-|
+| Needs at least "id" and "role" columns. This is the same users table
+| your migration activity created.
 */
 $config['users_table'] = 'users';
 
@@ -139,69 +96,35 @@ $config['users_table'] = 'users';
 |--------------------------------------------------------------------------
 | Access-Control-Allow-Origin
 |--------------------------------------------------------------------------
-|
-| Access-Control-Allow-Origin - change this to your domain if
-| already deployed. '*' allows any website to call your API from
-| a browser, so set your real domain in production.
-|
+| Which frontend URLs are allowed to call this API from a browser.
+| Add your React dev server AND your deployed React Render URL.
 */
-$config['allow_origin'] = '*';
+$config['allow_origin'] = [
+    'http://localhost:5173',          // Vite React dev server
+    'http://localhost:3000',          // Create-React-App dev server
+    getenv('FRONTEND_URL') ?: '',     // your deployed React URL (set on Render)
+];
 
 /*
 |--------------------------------------------------------------------------
 | Refresh Token Table
 |--------------------------------------------------------------------------
-|
-| This is the name of the table that will store the Refresh Token.
-|
 */
 $config['refresh_token_table'] = 'refresh_tokens';
 
 /*
 |--------------------------------------------------------------------------
-| JWT Issuer
+| JWT Issuer / Audience
 |--------------------------------------------------------------------------
-| This is used for the JWT Issuer claim (iss). Change it to your
-| application's name or URL.
-|
 */
-$config['jwt_issuer'] = 'your-app';
-
-/*
-|--------------------------------------------------------------------------
-| JWT Audience
-|--------------------------------------------------------------------------
-| This is used for the JWT Audience claim (aud). Change it to identify
-| the clients allowed to use the tokens.
-|
-*/
-
-$config['jwt_audience'] = 'your-app-clients';
+$config['jwt_issuer']   = 'lavalust-api';
+$config['jwt_audience'] = 'lavalust-client';
 
 /*
 |--------------------------------------------------------------------------
 | Rate Limiting
 |--------------------------------------------------------------------------
-| These settings are used for API rate limiting.
-|
 */
-$config['rate_limit_enabled'] = true;
-
-/*
-|--------------------------------------------------------------------------
-| Rate Limiting Requests and Seconds
-|--------------------------------------------------------------------------
-| These settings define the number of requests allowed and the time 
-| window in seconds.
-|
-*/
+$config['rate_limit_enabled']  = true;
 $config['rate_limit_requests'] = 60;
-
-/*
-|--------------------------------------------------------------------------
-| Rate Limiting Seconds
-|--------------------------------------------------------------------------
-| This setting defines the time window in seconds for rate limiting.
-|
-*/
-$config['rate_limit_seconds'] = 60;
+$config['rate_limit_seconds']  = 60;
