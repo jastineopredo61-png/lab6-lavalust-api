@@ -469,19 +469,36 @@ if ( ! function_exists('handle_cors'))
 {
 	/**
 	 * Handle CORS
-	 *	
+	 *
+	 * NOTE: allow_origin is defined in app/config/api.php, but config_item()
+	 * only reads app/config/config.php, so it can come back empty here.
+	 * We therefore also read FRONTEND_URL from the environment and always
+	 * allow the local dev servers, so CORS works no matter how config loads.
+	 *
 	 * @return void
 	 */
 	function handle_cors()
 	{
-		$allow_origin = config_item('allow_origin');
-		$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+		$configured = config_item('allow_origin');
+		$list = is_array($configured)
+			? $configured
+			: ((is_string($configured) && $configured !== '') ? [$configured] : []);
 
-		if (is_array($allow_origin)) {
-			$allowed = in_array($origin, $allow_origin, true);
-		} else {
-			$allowed = $allow_origin === '*' || $allow_origin === $origin;
+		$frontend = getenv('FRONTEND_URL');
+		if ($frontend) {
+			$list[] = $frontend;
 		}
+		$list[] = 'http://localhost:5173';
+		$list[] = 'http://localhost:3000';
+
+		$list = array_unique(array_filter(array_map(
+			function ($o) { return rtrim((string) $o, '/'); },
+			$list
+		)));
+
+		$origin  = rtrim($_SERVER['HTTP_ORIGIN'] ?? '', '/');
+		$allowed = in_array('*', $list, true)
+			|| ($origin !== '' && in_array($origin, $list, true));
 
 		if ($allowed && $origin) {
 			header("Access-Control-Allow-Origin: {$origin}");
